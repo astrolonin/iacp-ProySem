@@ -1,11 +1,16 @@
 #Ignore LaTeX build files
-*.aux
-*.log
-*.out
-*.toc
-*.fls
-*.fdb_latexmk
-*.synctex.gz
+**/*.aux
+**/*.bbl*
+**/*.bcf
+**/*.nav
+**/*.run.xml
+**/*.smn
+**/*.log
+*/**.out
+*/**.toc
+*/**.fls
+*/**.fdb_latexmk
+*/**.synctex.gz
 
 #Ignore C++ build artifacts
 *.o
