@@ -1,0 +1,213 @@
+\documentclass[a4paper]{article} 
+\input{head}
+%FONT AND TYPESETTING
+\usepackage[spanish]{babel}							%makes latex aware of your language, so better hyphenating etc
+\usepackage[T1]{fontenc} 							%use the T1 for proper searching and use of ligatures etc
+\usepackage[utf8]{inputenc}							%use UTF8 encoding for reading source code
+%\usepackage{helvet}								%use the helvetica font. This is very similar to the Arial font used in the Office templates.
+%\usepackage{amsfonts}
+\usepackage{sansmathfonts}
+\renewcommand{\familydefault}{\sfdefault}
+\usepackage{microtype}								%enables microtypesetting
+\usepackage{blindtext}
+\usepackage{cancel}
+\usepackage{csquotes}
+\usepackage{multicol}
+\usepackage{etoolbox}
+\usepackage{xargs}
+\usepackage{tikz}
+\usepackage{cancel}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{capt-of}
+\usetikzlibrary{trees,shapes,snakes}
+\usetikzlibrary{shapes.misc}
+\begin{document}
+
+
+%-------------------------------
+%	TITLE SECTION
+%-------------------------------
+
+\fancyhead[C]{}
+\hrule \medskip % Upper rule
+\begin{minipage}{0.295\textwidth} 
+\raggedright
+\footnotesize
+Lenin Valeria Rivas\hfill\\
+
+\end{minipage}
+\begin{minipage}{0.4\textwidth} 
+\centering 
+\large 
+Resumen\\ 
+\normalsize 
+Principal Components Analysis\\ 
+\end{minipage}
+\begin{minipage}{0.295\textwidth} 
+\raggedleft
+\today\hfill\\
+\end{minipage}
+\medskip\hrule 
+\bigskip
+
+%-------------------------------
+%	CONTENTS
+%-------------------------------
+
+\section{Marco teórico}
+
+\subsection{Single Value Decomposition (SVD)}
+
+En el marco de la \textit{principal component analysis} (PCA), para extraer los ''componentes principales'' de 
+la entrada, se utilzan diversos métodos matemáticos. La \textit{single value decomposition} (SVD) es uno de los métodos más
+utilizados dada su ligereza computacional en comparación a los métodos teóricos tradicionales propuestos en la definición de PCA.
+
+Esencialmente, la SVD busca descomponer una matriz de entrada $X \in \mathbb{R}^{m\times n}$ en una multiplicación de tres submatrices:
+\begin{equation}
+    X = U \Sigma V^T
+\end{equation}
+
+en la cual $U$ corresponde a los \textit{vectores singulares izquierdos}, $\Sigma$ corresponde a los \textit{valores singulares} y 
+$V$ corresponde a los \textit{vectores singulares derechos}.
+\begin{itemize}
+    \item $U$ es una matriz ortogonal de tamaño $m \times m$, cuyas columnas (${u_1,u_2,\dots,u_m}$) son denominadas \textbf{vectores singulares izquierdos} y forman la
+    base ortonormal del espacio de las \textbf{filas} de la matriz $X$. Estas columnas son los autovectores de la matriz $XX^T$.
+    \item $\Sigma$ es una matriz diagonal rectangular de tamaño $m \times n$, cuyos valores diagonales $\sigma_i = \Sigma_{ii}$ son denominados \textbf{valores singulares},
+    valores no-negativos y ordenados de manera descendente ($\sigma_1 \geq \sigma_2 \geq \dots \geq \sigma_k \geq 0$), donde $k = \min{m,n}$. Corresponden a la raíz cuadrada de los
+    autovalores no nulos de las matrices $XX^T$ y $X^TX$. ($\sigma_i = \sqrt{\lambda_i}$)
+    \item $V$ es una matriz ortogonal de tamaño $n \times n$, cuyas columnas (${v_1, v_2,\dots,v_n}$) son denominadas \textbf{vectores singulares derechos} y forman la
+    base ortonormal del espacio de las \textbf{columnas} de la matriz $X$. Estas columnas son los autovectores de la matriz $X^TX$.
+\end{itemize}
+Si bien $U$ y $V$ son \textbf{teóricamente ortogonales}, diversos métodos matemáticos que buscan estimarlos prefieren aproximarlos a un cierto valor de tolerancia $\epsilon$.
+\subsection{Rotación de Givens}
+
+Se consideran dos columnas de $X$, denotadas por $x_i$ y $x_j$. Se busca una matriz de rotación $G$:
+\begin{equation}
+    G = \left[ \begin{array}{cc}
+        \cos \theta & -\sin \theta\\
+        \sin \theta & \cos \theta
+    \end{array} \right]
+\end{equation}
+tal que las nuevas columnas $x_i'$ y $x_j'$, definidas por:
+\begin{equation}
+    [x_i',x_j'] = [x_i,x_j] \left[ \begin{array}{cc}
+        c & -s \\ s & c
+    \end{array}\right]
+\end{equation}
+satisfagan la condición de ortogonalidad $x_i^T x_j = 0$. Aquí $c = \cos \theta$ y $s = \sin \theta$.
+
+Para encontrar el ángulo $\theta$ que ortogonaliza las columnas, se expande el producto punto entre las nuevas columnas:
+\begin{equation}
+    x_i'^Tx_j' = (cx_i + sx_j)^T(-sx_i + cx_j) = 0
+\end{equation}
+Expandiendo se obtiene:
+\begin{equation}
+    -csx_i^Tx_i + c^2 x_i^T x_j - s^2x_j^Tx_i + cs x_j^Tx_j = 0
+\end{equation}
+Usando la conmuntatividad del producto punto ($x_i^Tx_j = x_j^Tx_i$) y agrupando para los términos $cs$ y $c^2 - s^2$, se pueden usar
+las identidades trigonométricas:
+\begin{equation}
+    2cs = 2\cos \theta \sin \theta = sin 2\theta \quad , \quad c^2 - s^2 = \cos^2 \theta - \sin^2 \theta = \cos 2\theta
+\end{equation}
+Reemplazando, se obtiene,
+\begin{equation}
+    (x^T_jx_j - x^T_ix_i) \frac{\sin 2\theta}{2} + x^T_ix_j \cos 2\theta = 0
+\end{equation}
+Despejando se obtiene $\tan \theta$,
+\begin{equation}
+    \tan 2\theta = \frac{2x_i^Tx_j}{x^T_ix_i - x_j^Tx_j}
+\end{equation}
+Para efectos de notación, se define $a = x_i^Tx_i$, $b = x_j^T x_j$ y $c = x_i^T x_j$, tal que
+\begin{equation}
+    \tan 2\theta = \frac{2c}{a - b}
+\end{equation}
+Se utiliza el recíproco $\tau$ para evitar divisiones por cero cuando $c$ es muy pequeño (*)
+\begin{equation}
+    \tau = \frac{b-a}{2c} = -\frac{1}{\tan 2\theta} \quad , \quad \tan 2\theta = -\frac{1}{\tau}
+\end{equation}
+Se relaciona $\tan 2\theta$ con $\tan \theta$ usando la identidad del ángulo doble.
+\begin{align}
+    \tan 2\theta &= \frac{2\tan \theta}{1 - \tan^2 \theta} = \frac{2t}{1-t^2}\\
+    \Rightarrow -\frac{1}{\tau} &= \frac{2t}{1-t^2}
+\end{align}
+Con esto se obtiene la \textbf{ecuación cuadrática característica} de la rotación de Jacobi.
+\begin{equation}
+    t^2 + 2 \tau t -1 = 0
+\end{equation}
+Resolviendo la ecuación se obtienen dos valores para $t = -\tau \pm \sqrt{\tau^2 +1}$. Se busca el valor absoluto más pequeño para evitar rotaciones agresivas a las columnas. Para esto se deriva una fórmula que asegura el mínimo valor al resolver la cuadrática.
+\begin{equation}
+    t_1 = -\tau + \sqrt{\tau^2 +1 } \quad , \quad t_2 = -\tau - \sqrt{\tau^2 + 1}
+\end{equation}
+    Para $\tau > 0$, $ |t_1| < |t_2|$. En cambio, para $\tau < 0$, $|t_2| > |t_1|$. Comenzando por el caso de $\tau > 0$, se multiplica y se divide $t$ por el conjugado:
+    \begin{equation}
+        t = \frac{(\sqrt{\tau^2 + 1} - \tau)(\sqrt{\tau^2 + 1} + \tau)}{\sqrt{\tau^2 +1} + \tau} =  \frac{(\cancel{\tau^2}+1)- \cancel{\tau^2}}{\sqrt{\tau^2 + 1} + \tau}
+        = \frac{1}{\sqrt{\tau^2 +1} + |\tau|}
+    \end{equation} 
+Luego, para el caso $\tau < 0$, se reescribe $-\tau - \sqrt{\tau^2 +1}$ como $-(\sqrt{\tau^2 +1} - |\tau|)$. Luego se sigue un proceso análogo al anterior,
+\begin{equation}
+    t = -\frac{(\sqrt{\tau^2}+1 - |\tau|)(\sqrt{\tau^2 +1} + |\tau|)}{\sqrt{\tau^2 +1}+ |\tau|} = -\frac{(\cancel{\tau^2}+1)- \cancel{\tau^2}}{\sqrt{\tau{2} + 1}+|\tau|} = \frac{-1}{\sqrt{\tau^2 + 1}+|\tau|}
+\end{equation}
+El numerador puede escribirse como la función $\text{sign}(\tau)$ dado que es 1 para $\tau > 0$ y $-1$ para $\tau < 0$. El denominador es igual en ambas casos. Luego,
+\begin{equation}
+    t = \frac{\text{sign}(\tau)}{|\tau| + \sqrt{\tau^2 + 1}}
+\end{equation}
+siempre entregará el valor absoluto más pequeño al resolver ecuación cuadrática.
+
+Asegurando que $t = \tan \theta$ es mínimo, se pueden obtener los valores de $c$ y $s$ mediante identidades trigonométricas.
+\begin{equation}
+    c = \cos \theta = \frac{1}{\sqrt{1 + \tan^2 \theta}} = \frac{1}{\sqrt{1 + t^2}} \quad , \quad s = \sin \theta = \cos \theta \tan \theta = cs
+\end{equation}
+Teniendo los valores de $c$ y $s$, se definen las nuevas columnas $x_i'$ y $x_j'$:
+\begin{equation}
+    x_i' = cx_i + sx_j \quad , \quad x_j' = -sx_i + cx_j
+\end{equation}
+Que cumplen con las condición de ortogonalidad.
+\subsection{Pseudocódigo}
+
+\begin{algorithm}
+    \caption{CUDA based One-Sided Jacobi implementation}
+    \begin{algorithmic}[1]
+        \State \textbf{Inputs:}\par $\mathbf{X} \gets \text{data matrix}\, (T \times D)$; \par
+        $\epsilon \gets \text{tolerance}$; \par
+        $\texttt{max\_sweeps} \gets \text{maximum amount of sweeps}$;
+        \State \textbf{Initializations:}\par
+        $I \gets \{0,\dots,D-1\},\, \text{indexes of}\, \mathbf{X}$;\par
+        $\mathbf{V} \gets \text{identity matrix of size }D\times D$;\par
+        $\texttt{any\_rots} \gets \text{loop condition}$;\par
+        \State \text{Initialize }$\mathbf{X}, \mathbf{V}$\text{ to }\texttt{Device};
+        \State \texttt{any\_rots\_host }$\gets$\texttt{ True};
+        \State \texttt{sweeps }$\gets 0,$\text{ sweep counter};
+        \While {(\texttt{any\_rots\_host} \AND \texttt{sweeps }$<$\texttt{ max\_sweeps})}
+            \State \texttt{any\_rots\_host }$\gets$\texttt{ False};
+            \State \texttt{any\_rots\_device }$\gets$\texttt{ any\_rots\_host},\text{ copy host value to device};
+            \For {($r$\textbf{ from }$0$\textbf{ to }$D-1$)}
+                \State \texttt{Sweep }$\lll D/2\text{ blocks, }1\text{ thread}\ggg(\mathbf{X},\mathbf{V},I_D,\texttt{any\_rots\_device})$\text{ execute device kernel};
+                \State \textbf{synchronize threads};
+                \State \texttt{circular\_shift}($I$),\, \text{shuffle indexes using }\textit{circular shift};
+            \EndFor
+            \State \texttt{any\_rots\_host }$\gets$\texttt{ any\_rots\_device};
+            \State \texttt{sweeps++};
+        \EndWhile
+    \end{algorithmic}
+\end{algorithm}
+
+\begin{algorithm}
+    \caption{\texttt{Sweep} kernel}
+    \begin{algorithmic}[1]
+        \State \textbf{Sweep}($\mathbf{X},\mathbf{V},I_D,\texttt{any\_rots\_device}$)
+        \For{\textbf{each }\text{pair(i,j) }\textbf{in }$I_D$}
+            \State $a \gets \mathbf{X}[\text{i}] \cdot \mathbf{X}[\text{i}]$;
+            \State $b \gets \mathbf{X}[\text{j}] \cdot \mathbf{X}[\text{j}]$;
+            \State $c \gets \mathbf{X}[\text{i}] \cdot \mathbf{X}[\text{j}]$;
+            \State \texttt{needs\_rot }$\gets(|c|/\sqrt{a\cdot b}) > \epsilon$\text{, rotation condition};
+            \If{\texttt{needs\_rot}}
+                \State $\tau, t,$\texttt{cos\_theta},\texttt{ sin\_theta }$\gets $\texttt{ given\_rot}($\mathbf{X}[\text{i}], \mathbf{X}[\text{j}]$);
+                \State \texttt{update}($\mathbf{X}[\text{i}], \mathbf{X}[\text{j}]$);
+                \State \texttt{update}($\mathbf{V}[\text{i}], \mathbf{V}[\text{j}]$);
+                \State \texttt{any\_rots\_device} = \texttt{any\_rots\_device}\OR 1;
+            \EndIf
+        \EndFor
+    \end{algorithmic}
+\end{algorithm}
+\end{document}
