@@ -6,6 +6,7 @@
 #include <iomanip>
 #include <random>
 #include <vector>
+#include <string>
 
 struct MatrixHCI {
     int rows; // T rows (frames)
@@ -17,6 +18,9 @@ struct MatrixHCI {
 
     // Column-major indexing
     double& operator()(int r, int c) {return data[c * rows + r];}
+
+    // Column-major indexing
+    const double& operator()(int r, int c) const {return data[c * rows + r];}
 };
 
 void printMatrix(const MatrixHCI& m, const std::string& name){
