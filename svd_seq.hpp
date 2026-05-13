@@ -3,6 +3,7 @@
 template <typename T>
 int sign(T val){
     return (T(0) < val) - (val < T(0));
+    //return (val >= T(0) ? 1 : -1);
 }
 
 void SVDSequential(MatrixHCI& X, MatrixHCI& V, double epsilon = 1e-5){
