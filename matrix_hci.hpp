@@ -55,7 +55,7 @@ void printMatrix(const MatrixHCI& m, const std::string& name){
     std::cout << "--- " << name << " (" << m.rows << "x" << m.cols << ") ---" << std::endl;
     for (int r = 0; r < m.rows; ++r){
         for (int c = 0; c < m.cols; ++c){
-            std::cout << std::setw(8) << std::setprecision(4) << std::fixed << m(r,c) << " ";
+            std::cout << std::setw(8) << std::setprecision(10) << std::fixed << m(r,c) << " ";
         }
         std::cout << std::endl;
     }

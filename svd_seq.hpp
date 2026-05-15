@@ -6,7 +6,7 @@ int sign(T val){
     //return (val >= T(0) ? 1 : -1);
 }
 
-void SVDSequential(MatrixHCI& X, MatrixHCI& V, double epsilon = 1e-7){
+void SVDSequential(MatrixHCI& X, MatrixHCI& V, double epsilon = 1e-10){
     int T = X.rows, D = X.cols;
     bool any_rots = true;
     int sweeps = 0, max_sweeps = 100000;
@@ -53,4 +53,20 @@ void SVDSequential(MatrixHCI& X, MatrixHCI& V, double epsilon = 1e-7){
         sweeps++;
     }
     std::cout << "Converged in " << sweeps << " sweeps.\n\n";
+}
+
+void extractUSigma(const MatrixHCI& W, MatrixHCI& U, std::vector<double>& sigma){
+    sigma.resize(W.cols, 0.0);
+    for (int c = 0; c < W.cols; ++c){
+        double norm = 0.0;
+        for (int r = 0; r < W.rows; ++r){
+            norm += W(r,c) * W(r,c);
+        }
+        sigma[c] = std::sqrt(norm);
+
+        for (int r = 0; r < W.rows; ++r){
+            if (sigma[c] > 1e-12){U(r,c) = W(r,c)/sigma[c];}
+            else {U(r,c) = 0.0;}            
+        }      
+    }
 }
