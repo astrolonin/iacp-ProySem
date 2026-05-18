@@ -4,9 +4,8 @@
 #include <chrono>
 
 // Usage:
-//   ./test                     → random 10x40 matrix (default)
-//   ./test cube.fits           → load from FITS file
-//   ./test cube.fits 64 64     → load from FITS, specify frame width/height
+//   ./test                     -> random 10x40 matrix (default)
+//   ./test cube.fits           -> load from FITS file
 int main(int argc, char *argv[]) {
   MatrixHCI X(0, 0);
 
@@ -22,15 +21,37 @@ int main(int argc, char *argv[]) {
     std::cout << "Using random " << T << "x" << D << " matrix\n\n";
   }
 
-  int T = X.rows;
+  int T_orig = X.rows;
+  int D_orig = X.cols;
+
+  // When T < D, the Jacobi SVD needs a D x D matrix V, which is infeasible
+  // for large D (e.g. 1M x 1M = 8 TB). Instead, we transpose X and compute
+  // SVD(X^T). Since X = U * Sigma * V^T implies X^T = V * Sigma * U^T,
+  // the SVD of X^T gives us the same singular values, with U and V swapped.
+  bool transposed = false;
+  if (T_orig < D_orig) {
+    std::cout << "T (" << T_orig << ") < D (" << D_orig
+              << "): transposing to avoid " << D_orig << "x" << D_orig
+              << " matrix V ("
+              << (static_cast<double>(D_orig) * D_orig * 8) / (1024 * 1024 * 1024)
+              << " GB)\n\n";
+    X = X.transpose(); // X is now D_orig x T_orig
+    transposed = true;
+  }
+
+  int T = X.rows; // working dimensions (may be swapped)
   int D = X.cols;
 
   MatrixHCI W = X; // Working copy for SVD
 
-  MatrixHCI V(D, D); // Right singular vectors (starts as identity)
+  MatrixHCI V(D, D); // Now D is the smaller dimension
   for (int i = 0; i < D; ++i) {
     V(i, i) = 1.0;
   }
+
+  std::cout << "SVD working on " << T << "x" << D << " matrix (V is " << D
+            << "x" << D << " = "
+            << (static_cast<double>(D) * D * 8) / (1024 * 1024) << " MB)\n";
 
   // Time the sequential SVD
   auto start = std::chrono::high_resolution_clock::now();
@@ -49,16 +70,17 @@ int main(int argc, char *argv[]) {
   sortPC(U, Sigma, V);
 
   // Print singular values
-  std::cout << "Singular Values (top 10):\n";
-  int n_print = std::min(D, 10);
-  for (int i = 0; i < n_print; ++i) {
+  int rank = std::min(T_orig, D_orig); // number of nonzero singular values
+  std::cout << "Singular Values (top " << std::min(rank, 10) << "):\n";
+  for (int i = 0; i < std::min(rank, 10); ++i) {
     std::cout << "  Sigma[" << i << "] = " << std::fixed
               << std::setprecision(4) << Sigma[i] << "\n";
   }
-  if (D > 10) std::cout << "  ... (" << D - 10 << " more)\n";
+  if (rank > 10) std::cout << "  ... (" << rank - 10 << " more)\n";
   std::cout << "\n";
 
   // Verification: Reconstruction X ~ U * diag(Sigma) * V^T
+  // (verified on the working matrix, which may be transposed)
   MatrixHCI USigma(T, D);
   for (int c = 0; c < D; ++c) {
     for (int r = 0; r < T; ++r) {
@@ -75,7 +97,9 @@ int main(int argc, char *argv[]) {
         max_err = err;
     }
   }
-  std::cout << "Max reconstruction error |X - U*Sigma*V^T|: " << std::scientific
+
+  std::string label = transposed ? "|X^T - U*Sigma*V^T|" : "|X - U*Sigma*V^T|";
+  std::cout << "Max reconstruction error " << label << ": " << std::scientific
             << std::setprecision(2) << max_err << "\n";
 
   return 0;
