@@ -1,14 +1,14 @@
+#ifndef SVD_SEQ_HPP
+#define SVD_SEQ_HPP
 #include "matrix_hci.hpp"
+#include <utility>
 
-template <typename T> int sign(T val) {
-  return (T(0) < val) - (val < T(0));
-  // return (val >= T(0) ? 1 : -1);
-}
+template <typename T> int sign(T val) {return (T(0) < val) - (val < T(0));}
 
 inline void SVDSequential(MatrixHCI &X, MatrixHCI &V, double epsilon = 1e-10) {
-  int T = X.rows, D = X.cols;
+  int M = X.rows, D = X.cols;
   bool any_rots = true;
-  int sweeps = 0, max_sweeps = 500;
+  int sweeps = 0, max_sweeps = 500; // Set the maximum number of sweeps
 
   while (any_rots && sweeps < max_sweeps) {
     any_rots = false;
@@ -16,25 +16,29 @@ inline void SVDSequential(MatrixHCI &X, MatrixHCI &V, double epsilon = 1e-10) {
       for (int j = i + 1; j < D; ++j) {
 
         double a = 0.0, b = 0.0, c = 0.0;
-        for (int r = 0; r < T; ++r) {
+        for (int r = 0; r < M; ++r) {
           a += X(r, i) * X(r, i);
           b += X(r, j) * X(r, j);
           c += X(r, i) * X(r, j);
         }
 
-        if (a < 1e-12 || b < 1e-12)
+        if (a < 1e-12 || b < 1e-12) // Skip if the elements are too small to
+                                    // prevent division by zero
           continue;
-        double corr = std::abs(c) / std::sqrt(a * b);
+        double corr =
+            std::abs(c) /
+            std::sqrt(a * b); // Calculate the correlation between the elements
 
-        if (corr > epsilon) {
-          any_rots = true;
+        if (corr >
+            epsilon) {     // Check if the correlation is greater than epsilon
+          any_rots = true; // Set any_rots to true to continue the loop
 
           double tau = (b - a) / (2.0 * c);
           double t = sign(tau) / (std::abs(tau) + std::sqrt(1.0 + tau * tau));
           double c_rot = 1.0 / std::sqrt(1.0 + t * t);
           double s_rot = c_rot * t;
 
-          for (int r = 0; r < T; ++r) {
+          for (int r = 0; r < M; ++r) {
             double x_i = X(r, i);
             double x_j = X(r, j);
             X(r, i) = c_rot * x_i - s_rot * x_j;
@@ -52,11 +56,15 @@ inline void SVDSequential(MatrixHCI &X, MatrixHCI &V, double epsilon = 1e-10) {
     }
     sweeps++;
   }
-  std::cout << "Converged in " << sweeps << " sweeps.\n\n";
+  if (sweeps >= max_sweeps) {
+    std::cout << "WARNING: Did NOT converge after " << sweeps << " sweeps.\n\n";
+  } else {
+    std::cout << "Converged in " << sweeps << " sweeps.\n\n";
+  }
 }
 
 inline void extractUSigma(const MatrixHCI &W, MatrixHCI &U,
-                   std::vector<double> &sigma) {
+                          std::vector<double> &sigma) {
   sigma.resize(W.cols, 0.0);
   for (int c = 0; c < W.cols; ++c) {
     double norm = 0.0;
@@ -74,3 +82,26 @@ inline void extractUSigma(const MatrixHCI &W, MatrixHCI &U,
     }
   }
 }
+
+inline void sortPC(MatrixHCI &U, std::vector<double> &sigma, MatrixHCI &V) {
+  int D = sigma.size();
+  for (int i = 0; i < D - 1; ++i) {
+    int index = i;
+    for (int j = i + 1; j < D; ++j) {
+      if (sigma[j] > sigma[index]) {
+        index = j;
+      }
+    }
+    if (index != i) {
+      std::swap(sigma[i], sigma[index]);
+      for (int r = 0; r < U.rows; ++r) {
+        std::swap(U(r, i), U(r, index));
+      }
+      for (int r = 0; r < V.rows; ++r) {
+        std::swap(V(r, i), V(r, index));
+      }
+    }
+  }
+}
+
+#endif
