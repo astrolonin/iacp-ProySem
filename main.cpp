@@ -3,18 +3,27 @@
 #include "svd_seq.hpp"
 #include <chrono>
 
+// =============================================================================
+// main.cpp — Sequential SVD entry point
+//
+// This is the CPU-only version of the Jacobi SVD pipeline. It:
+//   1. Loads a matrix (random or from a FITS data cube)
+//   2. Transposes if T < D to keep V small
+//   3. Runs the sequential One-Sided Jacobi SVD
+//   4. Extracts U and Sigma, sorts by descending singular value
+//   5. Verifies correctness via reconstruction error
+//
 // Usage:
-//   ./test                     -> random 10x40 matrix (default)
-//   ./test cube.fits           -> load from FITS file
+//   ./test                     → random 10×40 matrix (default)
+//   ./test cube.fits           → load from FITS file
+// =============================================================================
 int main(int argc, char *argv[]) {
   MatrixHCI X(0, 0);
 
   if (argc >= 2) {
-    // Load from FITS file
     std::string fits_path = argv[1];
     X = readFitsCube(fits_path);
   } else {
-    // Default: random matrix for testing
     int T = 10;
     int D = 40;
     X = randMatrix(T, D);
@@ -24,10 +33,11 @@ int main(int argc, char *argv[]) {
   int T_orig = X.rows;
   int D_orig = X.cols;
 
-  // When T < D, the Jacobi SVD needs a D x D matrix V, which is infeasible
-  // for large D (e.g. 1M x 1M = 8 TB). Instead, we transpose X and compute
-  // SVD(X^T). Since X = U * Sigma * V^T implies X^T = V * Sigma * U^T,
-  // the SVD of X^T gives us the same singular values, with U and V swapped.
+  // --- Transpose optimization ---
+  // When T < D, computing SVD directly requires a D×D matrix V, which is
+  // infeasible for large D. Instead, we transpose X and compute SVD(X^T).
+  // Since X = U * Sigma * V^T implies X^T = V * Sigma * U^T,
+  // the SVD of X^T gives the same singular values with U and V swapped.
   bool transposed = false;
   if (T_orig < D_orig) {
     std::cout << "T (" << T_orig << ") < D (" << D_orig
@@ -35,16 +45,21 @@ int main(int argc, char *argv[]) {
               << " matrix V ("
               << (static_cast<double>(D_orig) * D_orig * 8) / (1024 * 1024 * 1024)
               << " GB)\n\n";
-    X = X.transpose(); // X is now D_orig x T_orig
+    X = X.transpose();
     transposed = true;
   }
 
-  int T = X.rows; // working dimensions (may be swapped)
+  int T = X.rows; // working dimensions (may be swapped after transpose)
   int D = X.cols;
 
-  MatrixHCI W = X; // Working copy for SVD
+  MatrixHCI W = X; // Working copy — SVD modifies this in place
 
-  MatrixHCI V(D, D); // Now D is the smaller dimension
+  // Initialize V as the D×D identity matrix
+  // [DELETABLE] After SVD convergence, V accumulates all the Givens rotations.
+  // [DELETABLE] If we didn't transpose: V contains the right singular vectors.
+  // [DELETABLE] If we transposed: V contains what would be U of the original X
+  // [DELETABLE] (since the roles of U and V swap under transposition).
+  MatrixHCI V(D, D);
   for (int i = 0; i < D; ++i) {
     V(i, i) = 1.0;
   }
@@ -63,14 +78,14 @@ int main(int argc, char *argv[]) {
   std::cout << "Sequential SVD took " << std::fixed << std::setprecision(4)
             << elapsed_ms << " ms\n\n";
 
-  // Extract U and Sigma from W
+  // Extract U and Sigma from the converged working matrix W
   MatrixHCI U(T, D);
   std::vector<double> Sigma;
   extractUSigma(W, U, Sigma);
   sortPC(U, Sigma, V);
 
-  // Print singular values
-  int rank = std::min(T_orig, D_orig); // number of nonzero singular values
+  // Print top singular values
+  int rank = std::min(T_orig, D_orig);
   std::cout << "Singular Values (top " << std::min(rank, 10) << "):\n";
   for (int i = 0; i < std::min(rank, 10); ++i) {
     std::cout << "  Sigma[" << i << "] = " << std::fixed
@@ -79,8 +94,12 @@ int main(int argc, char *argv[]) {
   if (rank > 10) std::cout << "  ... (" << rank - 10 << " more)\n";
   std::cout << "\n";
 
-  // Verification: Reconstruction X ~ U * diag(Sigma) * V^T
-  // (verified on the working matrix, which may be transposed)
+  // --- Verification: X ≈ U * diag(Sigma) * V^T ---
+  //
+  // [DELETABLE] This checks that the decomposition is correct by reconstructing
+  // [DELETABLE] the original matrix from U, Sigma, V and measuring the maximum
+  // [DELETABLE] element-wise error. For a correct SVD, this should be near
+  // [DELETABLE] machine epsilon (~1e-15) times the matrix norm.
   MatrixHCI USigma(T, D);
   for (int c = 0; c < D; ++c) {
     for (int r = 0; r < T; ++r) {
