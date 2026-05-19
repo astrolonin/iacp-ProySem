@@ -8,8 +8,8 @@
 
 CXX      = g++
 NVCC     = nvcc
-CXXFLAGS = -O2 -std=c++17
-NVFLAGS  = -O2 -std=c++17
+CXXFLAGS = -O3 -std=c++17
+NVFLAGS  = -O3 -std=c++17 -ccbin g++-9
 
 # CFITSIO library flags (required for FITS file reading)
 FITS_FLAGS = -lcfitsio
