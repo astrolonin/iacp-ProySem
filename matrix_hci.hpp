@@ -11,18 +11,8 @@
 // MatrixHCI — A column-major dense matrix for High Contrast Imaging
 //
 // Stores a T×D matrix (T rows = frames, D columns = pixels) in a single flat
-// std::vector using column-major layout: element (r, c) lives at data[c*rows+r].
-//
-// [DELETABLE] Column-major means columns are contiguous in memory. This is the
-// [DELETABLE] same layout as Fortran and MATLAB. We chose it because the Jacobi
-// [DELETABLE] SVD operates on column pairs — reading all rows of a column is a
-// [DELETABLE] sequential memory scan (fast), whereas in row-major it would jump
-// [DELETABLE] D elements apart (slow, cache-unfriendly).
-//
-// [DELETABLE] On the GPU side, column-major also enables "coalesced" memory
-// [DELETABLE] access: when threads 0, 1, 2, ... read rows 0, 1, 2, ... of the
-// [DELETABLE] same column, they access consecutive addresses, allowing the GPU
-// [DELETABLE] to satisfy all reads in a single memory transaction.
+// std::vector using column-major layout: element (r, c) lives at
+// data[c*rows+r].
 // =============================================================================
 struct MatrixHCI {
   int rows; // T (number of frames)
@@ -40,10 +30,6 @@ struct MatrixHCI {
 
   // Matrix multiplication: C = A * B, where A is this (rows × cols) and
   // B is other (other.rows × other.cols). Requires cols == other.rows.
-  //
-  // [DELETABLE] This is a naive O(n³) implementation — fine for small matrices
-  // [DELETABLE] (e.g., D×D where D = T_orig ≈ 192 after transpose), but would
-  // [DELETABLE] be too slow for large matrices. For those, use cuBLAS on GPU.
   MatrixHCI operator*(const MatrixHCI &other) const {
     if (cols != other.rows) {
       throw std::invalid_argument("Matrix dimensions mismatched.");
@@ -64,10 +50,6 @@ struct MatrixHCI {
 
   // Transpose: returns a new matrix B such that B(c, r) = A(r, c)
   // The result has shape (cols × rows).
-  //
-  // [DELETABLE] Used by main.cpp and main_cuda.cu to flip X from T×D to D×T
-  // [DELETABLE] when T < D. This makes V be T×T instead of D×D, reducing
-  // [DELETABLE] memory from potentially terabytes to kilobytes.
   MatrixHCI transpose() const {
     MatrixHCI result(cols, rows);
     for (int r = 0; r < rows; ++r) {

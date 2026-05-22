@@ -109,7 +109,6 @@ inline void extractUSigma(const MatrixHCI &W, MatrixHCI &U,
     }
     sigma[c] = std::sqrt(norm);
 
-    // Normalize to get the unit singular vector
     for (int r = 0; r < W.rows; ++r) {
       if (sigma[c] > 1e-12) {
         U(r, c) = W(r, c) / sigma[c];
