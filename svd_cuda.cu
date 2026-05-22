@@ -1,16 +1,15 @@
 // =============================================================================
-// svd_cuda.cu — CUDA kernel for One-Sided Jacobi SVD
+// Kernel en CUDA para Jacobi unidireccional
 //
-// This file contains the GPU kernel that performs one round of Jacobi
-// rotations. Each CUDA block handles one column pair (i, j), and the threads
-// within a block collaborate to compute dot products and apply rotations across
-// rows.
+// Cada bloque de CUDA maneja un par de columnas (i, j), y los hilos
+// dentro de un bloque colaboran para calcular los productos punto y aplicar
+// rotaciones.
 //
-// The host code (main_cuda.cu) calls this kernel repeatedly with different
-// pair configurations (round-robin tournament) to complete full sweeps.
+// El código host llama a este kernel repetidamente con diferentes
+// combinaciones de pares para realizar los barridos.
 // =============================================================================
 
-#include <cmath> // for sqrt, abs on device (CUDA maps these to device intrinsics)
+#include <cmath>
 
 // =============================================================================
 // sign() helper — returns -1, 0, or +1
