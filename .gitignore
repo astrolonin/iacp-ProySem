@@ -1,5 +1,7 @@
 # Data directory (FITS files, large binaries)
 data/
+proposal/
+summary/
 
 # Compiled binaries
 svd_seq
