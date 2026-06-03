@@ -157,9 +157,14 @@ int main(int argc, char *argv[]) {
   // Initialize V = Identity on the GPU
   initIdentityOnDevice(d_V, D);
 
-  // Convergence flag (single int on the GPU)
-  int *d_any_rots;
-  CUDA_CHECK(cudaMalloc(&d_any_rots, sizeof(int)));
+  // Convergence flag — pinned mapped (zero-copy) memory
+  // The flag lives in host RAM but is directly accessible from the GPU via
+  // PCIe.  This eliminates the two cudaMemcpy calls per sweep (reset + readback)
+  // that previously transferred this single int between CPU and GPU memory.
+  int *h_any_rots;   // host pointer (CPU reads this directly)
+  int *d_any_rots;   // device pointer (GPU writes via atomicOr)
+  CUDA_CHECK(cudaHostAlloc(&h_any_rots, sizeof(int), cudaHostAllocMapped));
+  CUDA_CHECK(cudaHostGetDevicePointer(&d_any_rots, h_any_rots, 0));
 
   // NOTE: No d_pairs array needed — the optimized kernel computes
   // column pair indices arithmetically from the round number.
@@ -172,16 +177,14 @@ int main(int argc, char *argv[]) {
 
   int max_sweeps = 500;
   int sweeps = 0;
-  int h_any_rots = 1; // host copy of convergence flag
   double epsilon = 1e-10;
 
   auto start = std::chrono::high_resolution_clock::now();
 
-  while (h_any_rots && sweeps < max_sweeps) {
-    // Reset convergence flag to 0 (no rotations yet this sweep)
-    h_any_rots = 0;
-    CUDA_CHECK(cudaMemcpy(d_any_rots, &h_any_rots, sizeof(int),
-                          cudaMemcpyHostToDevice));
+  *h_any_rots = 1; // ensure we enter the loop
+  while (*h_any_rots && sweeps < max_sweeps) {
+    // Reset convergence flag — direct host write, no cudaMemcpy
+    *h_any_rots = 0;
 
     // One full sweep = D-1 rounds (covers all D*(D-1)/2 column pairs)
     for (int round = 0; round < D - 1; ++round) {
@@ -193,9 +196,8 @@ int main(int argc, char *argv[]) {
       CUDA_CHECK(cudaDeviceSynchronize());
     }
 
-    // Read back convergence flag
-    CUDA_CHECK(cudaMemcpy(&h_any_rots, d_any_rots, sizeof(int),
-                          cudaMemcpyDeviceToHost));
+    // No readback needed — *h_any_rots was written directly by the GPU.
+    // cudaDeviceSynchronize() above guarantees all GPU writes are visible.
     sweeps++;
   }
 
@@ -220,10 +222,10 @@ int main(int argc, char *argv[]) {
   CUDA_CHECK(cudaMemcpy(V.data.data(), d_V, D * D * sizeof(double),
                         cudaMemcpyDeviceToHost));
 
-  // Free GPU memory
+  // Free GPU memory (h_any_rots was pinned, so use cudaFreeHost)
   CUDA_CHECK(cudaFree(d_X));
   CUDA_CHECK(cudaFree(d_V));
-  CUDA_CHECK(cudaFree(d_any_rots));
+  CUDA_CHECK(cudaFreeHost(h_any_rots));
 
   // --- Step 8: Extract U and Sigma, sort by descending singular value ---
 
@@ -244,14 +246,19 @@ int main(int argc, char *argv[]) {
   std::cout << "\n";
 
   // --- Step 9: Verification — reconstruct and measure error ---
+  std::cout << "Reconstructing matrix to measure error (this may take a while for large datasets)...\n";
+  std::cout << "  -> Computing USigma (" << M << "x" << D << ")...\n";
   MatrixHCI USigma(M, D);
   for (int c = 0; c < D; ++c) {
     for (int r = 0; r < M; ++r) {
       USigma(r, c) = U(r, c) * Sigma[c];
     }
   }
+
+  std::cout << "  -> Multiplying USigma * V^T (" << M << "x" << D << " * " << D << "x" << D << ")...\n";
   MatrixHCI Reconstructed = USigma * V.transpose();
 
+  std::cout << "  -> Computing maximum absolute error...\n";
   double max_err = 0.0;
   for (int r = 0; r < M; ++r) {
     for (int c = 0; c < D; ++c) {

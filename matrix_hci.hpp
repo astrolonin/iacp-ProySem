@@ -36,13 +36,15 @@ struct MatrixHCI {
     }
     MatrixHCI result(rows, other.cols);
 
-    for (int r = 0; r < rows; ++r) {
-      for (int c = 0; c < other.cols; ++c) {
-        double sum = 0.0;
-        for (int k = 0; k < cols; ++k) {
-          sum += (*this)(r, k) * other(k, c);
+    // Cache-friendly column-major matrix multiplication.
+    // By nesting the loops as (c, k, r), the innermost loop iterates over 'r',
+    // which accesses elements in contiguous memory for both 'result' and 'this'.
+    for (int c = 0; c < other.cols; ++c) {
+      for (int k = 0; k < cols; ++k) {
+        double b_kc = other(k, c);
+        for (int r = 0; r < rows; ++r) {
+          result(r, c) += (*this)(r, k) * b_kc;
         }
-        result(r, c) = sum;
       }
     }
     return result;

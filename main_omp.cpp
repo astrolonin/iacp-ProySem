@@ -114,12 +114,17 @@ int main(int argc, char *argv[]) {
   std::cout << "\n";
 
   // --- Verification ---
+  std::cout << "Reconstructing matrix to measure error (this may take a while for large datasets)...\n";
+  std::cout << "  -> Computing USigma (" << T << "x" << D << ")...\n";
   MatrixHCI USigma(T, D);
   for (int c = 0; c < D; ++c)
     for (int r = 0; r < T; ++r)
       USigma(r, c) = U(r, c) * Sigma[c];
 
+  std::cout << "  -> Multiplying USigma * V^T (" << T << "x" << D << " * " << D << "x" << D << ")...\n";
   MatrixHCI Reconstructed = USigma * V.transpose();
+
+  std::cout << "  -> Computing maximum absolute error...\n";
 
   double max_err = 0.0;
   for (int r = 0; r < T; ++r)

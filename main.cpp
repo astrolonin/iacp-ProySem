@@ -96,17 +96,23 @@ int main(int argc, char *argv[]) {
 
   // --- Verification: X ≈ U * diag(Sigma) * V^T ---
   //
-  // [DELETABLE] This checks that the decomposition is correct by reconstructing
-  // [DELETABLE] the original matrix from U, Sigma, V and measuring the maximum
-  // [DELETABLE] element-wise error. For a correct SVD, this should be near
-  // [DELETABLE] machine epsilon (~1e-15) times the matrix norm.
+  // This checks that the decomposition is correct by reconstructing
+  // the original matrix from U, Sigma, V and measuring the maximum
+  // element-wise error. For a correct SVD, this should be near
+  // machine epsilon (~1e-15) times the matrix norm.
+  std::cout << "Reconstructing matrix to measure error (this may take a while for large datasets)...\n";
+  std::cout << "  -> Computing USigma (" << T << "x" << D << ")...\n";
   MatrixHCI USigma(T, D);
   for (int c = 0; c < D; ++c) {
     for (int r = 0; r < T; ++r) {
       USigma(r, c) = U(r, c) * Sigma[c];
     }
   }
+
+  std::cout << "  -> Multiplying USigma * V^T (" << T << "x" << D << " * " << D << "x" << D << ")...\n";
   MatrixHCI Reconstructed = USigma * V.transpose();
+
+  std::cout << "  -> Computing maximum absolute error...\n";
 
   double max_err = 0.0;
   for (int r = 0; r < T; ++r) {

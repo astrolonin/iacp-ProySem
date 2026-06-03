@@ -151,15 +151,16 @@ cudaError_t runSVDBenchmark(int M, int D, BenchmarkResult &result) {
   auto t0 = Clock::now();
 
   double *d_X, *d_V;
-  int *d_any_rots;
+  int *h_any_rots, *d_any_rots;
 
   cudaError_t err;
   err = cudaMalloc(&d_X, x_bytes);
   if (err != cudaSuccess) return err;
   err = cudaMalloc(&d_V, v_bytes);
   if (err != cudaSuccess) { cudaFree(d_X); return err; }
-  err = cudaMalloc(&d_any_rots, sizeof(int));
+  err = cudaHostAlloc(&h_any_rots, sizeof(int), cudaHostAllocMapped);
   if (err != cudaSuccess) { cudaFree(d_X); cudaFree(d_V); return err; }
+  cudaHostGetDevicePointer(&d_any_rots, h_any_rots, 0);
 
   auto t1 = Clock::now();
   result.alloc_ms = Ms(t1 - t0).count();
@@ -184,13 +185,12 @@ cudaError_t runSVDBenchmark(int M, int D, BenchmarkResult &result) {
   double epsilon = 1e-10;
   int max_sweeps = 500;
   int sweeps = 0;
-  int h_any_rots = 1;
 
   auto t4 = Clock::now();
 
-  while (h_any_rots && sweeps < max_sweeps) {
-    h_any_rots = 0;
-    cudaMemcpy(d_any_rots, &h_any_rots, sizeof(int), cudaMemcpyHostToDevice);
+  *h_any_rots = 1;
+  while (*h_any_rots && sweeps < max_sweeps) {
+    *h_any_rots = 0;
 
     for (int round = 0; round < D - 1; ++round) {
       jacobi_sweep_kernel<<<numBlocks, blockSize>>>(
@@ -198,7 +198,6 @@ cudaError_t runSVDBenchmark(int M, int D, BenchmarkResult &result) {
       cudaDeviceSynchronize();
     }
 
-    cudaMemcpy(&h_any_rots, d_any_rots, sizeof(int), cudaMemcpyDeviceToHost);
     sweeps++;
   }
 
@@ -222,7 +221,7 @@ cudaError_t runSVDBenchmark(int M, int D, BenchmarkResult &result) {
   // Free GPU memory
   cudaFree(d_X);
   cudaFree(d_V);
-  cudaFree(d_any_rots);
+  cudaFreeHost(h_any_rots);
 
   // --- Verification: spot-check reconstruction error ---
   // Extract sigma from column norms of h_W
