@@ -4,6 +4,7 @@ data/
 # Compiled binaries
 svd_seq
 svd_cuda
+svd_omp
 test
 stress_test
 
