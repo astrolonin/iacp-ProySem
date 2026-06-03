@@ -1,12 +1,14 @@
 // =============================================================================
-// Kernel en CUDA para Jacobi unidireccional
+// Kernel en CUDA para Jacobi unidireccional (optimized)
 //
 // Cada bloque de CUDA maneja un par de columnas (i, j), y los hilos
 // dentro de un bloque colaboran para calcular los productos punto y aplicar
 // rotaciones.
 //
-// El código host llama a este kernel repetidamente con diferentes
-// combinaciones de pares para realizar los barridos.
+// OPTIMIZATION: The kernel computes column pair indices arithmetically using
+// the round-robin formula, eliminating the need to copy an index array
+// from host to device every round.  The `round` number is passed as a
+// kernel parameter instead.
 // =============================================================================
 
 #include <cmath>
@@ -20,30 +22,49 @@ template <typename T> __device__ int d_sign(T val) {
 }
 
 // =============================================================================
-// jacobi_sweep_kernel — The GPU kernel
+// d_roundRobinIndex — Compute the column index at position `pos` for a
+// given `round` of the round-robin tournament.
+//
+// The tournament fixes index 0 and rotates indices [1..D-1] right by one
+// position each round.  After `round` right-rotations, the value at
+// position `pos` is:
+//   pos == 0:  always 0
+//   pos >= 1:  ((pos - 1 - round) mod (D-1)) + 1
+//
+// This replaces the host-side shuffle + cudaMemcpy of the pairs array,
+// saving one global-memory read and one H2D transfer per round.
+// =============================================================================
+__device__ int d_roundRobinIndex(int pos, int round, int D) {
+  if (pos == 0)
+    return 0;
+  int mod = D - 1;
+  int idx = ((pos - 1 - round) % mod + mod) % mod; // always-positive mod
+  return idx + 1;
+}
+
+// =============================================================================
+// jacobi_sweep_kernel — The GPU kernel (optimized: no index array)
 //
 // Parameters:
 //   X         — working matrix, column-major, M rows × D cols (device memory)
 //   V         — rotation accumulator, column-major, D × D (device memory)
-//   pairs     — array of D column indices defining this round's pairing (device
-//   memory) M         — number of rows in X (after transpose, this is the large
-//   dimension) D         — number of columns in X (after transpose, this is the
-//   small dimension) epsilon   — convergence threshold for the correlation test
+//   M         — number of rows in X
+//   D         — number of columns in X
+//   round     — current round number within the sweep (0..D-2)
+//   epsilon   — convergence threshold for the correlation test
 //   any_rots  — device flag; set to 1 if any block performed a rotation
 // =============================================================================
-__global__ void jacobi_sweep_kernel(double *X, double *V, const int *pairs,
-                                    int M, int D, double epsilon,
+__global__ void jacobi_sweep_kernel(double *X, double *V, int M, int D,
+                                    int round, double epsilon,
                                     int *any_rots) {
   // ---------------------------------------------------------------------------
-  // Step 0: Identify which column pair this block handles
-  // The pairs array has D entries. We pair them by folding:
-  //   block 0 → (pairs[0], pairs[D-1])
-  //   block 1 → (pairs[1], pairs[D-2])
-  //   block k → (pairs[k], pairs[D-1-k])
+  // Step 0: Compute which column pair this block handles
+  // Block k processes pair (index[k], index[D-1-k]) where the indices
+  // are derived from the round-robin formula — no global memory read needed.
   // ---------------------------------------------------------------------------
   int pair_idx = blockIdx.x;
-  int col_i = pairs[pair_idx];
-  int col_j = pairs[D - 1 - pair_idx];
+  int col_i = d_roundRobinIndex(pair_idx, round, D);
+  int col_j = d_roundRobinIndex(D - 1 - pair_idx, round, D);
 
   // Thread ID and stride for splitting the row loop across threads
   int tid = threadIdx.x;

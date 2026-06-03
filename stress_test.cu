@@ -128,11 +128,11 @@ cudaError_t runSVDBenchmark(int M, int D, BenchmarkResult &result) {
   result.M = M;
   result.D = D;
 
-  // Calculate memory requirements
+  // Calculate memory requirements (no pairs array needed — indices computed
+  // arithmetically)
   size_t x_bytes = static_cast<size_t>(M) * D * sizeof(double);
   size_t v_bytes = static_cast<size_t>(D) * D * sizeof(double);
-  size_t pairs_bytes = D * sizeof(int);
-  size_t total_bytes = x_bytes + v_bytes + pairs_bytes + sizeof(int);
+  size_t total_bytes = x_bytes + v_bytes + sizeof(int);
   result.gpu_mem_mb = total_bytes / (1024.0 * 1024.0);
 
   // Check if we have enough GPU memory
@@ -151,17 +151,15 @@ cudaError_t runSVDBenchmark(int M, int D, BenchmarkResult &result) {
   auto t0 = Clock::now();
 
   double *d_X, *d_V;
-  int *d_pairs, *d_any_rots;
+  int *d_any_rots;
 
   cudaError_t err;
   err = cudaMalloc(&d_X, x_bytes);
   if (err != cudaSuccess) return err;
   err = cudaMalloc(&d_V, v_bytes);
   if (err != cudaSuccess) { cudaFree(d_X); return err; }
-  err = cudaMalloc(&d_pairs, pairs_bytes);
-  if (err != cudaSuccess) { cudaFree(d_X); cudaFree(d_V); return err; }
   err = cudaMalloc(&d_any_rots, sizeof(int));
-  if (err != cudaSuccess) { cudaFree(d_X); cudaFree(d_V); cudaFree(d_pairs); return err; }
+  if (err != cudaSuccess) { cudaFree(d_X); cudaFree(d_V); return err; }
 
   auto t1 = Clock::now();
   result.alloc_ms = Ms(t1 - t0).count();
@@ -188,9 +186,6 @@ cudaError_t runSVDBenchmark(int M, int D, BenchmarkResult &result) {
   int sweeps = 0;
   int h_any_rots = 1;
 
-  std::vector<int> indices(D);
-  for (int i = 0; i < D; ++i) indices[i] = i;
-
   auto t4 = Clock::now();
 
   while (h_any_rots && sweeps < max_sweeps) {
@@ -198,15 +193,9 @@ cudaError_t runSVDBenchmark(int M, int D, BenchmarkResult &result) {
     cudaMemcpy(d_any_rots, &h_any_rots, sizeof(int), cudaMemcpyHostToDevice);
 
     for (int round = 0; round < D - 1; ++round) {
-      cudaMemcpy(d_pairs, indices.data(), pairs_bytes, cudaMemcpyHostToDevice);
-
       jacobi_sweep_kernel<<<numBlocks, blockSize>>>(
-          d_X, d_V, d_pairs, M, D, epsilon, d_any_rots);
+          d_X, d_V, M, D, round, epsilon, d_any_rots);
       cudaDeviceSynchronize();
-
-      int last = indices[D - 1];
-      for (int k = D - 1; k > 1; --k) indices[k] = indices[k - 1];
-      indices[1] = last;
     }
 
     cudaMemcpy(&h_any_rots, d_any_rots, sizeof(int), cudaMemcpyDeviceToHost);
@@ -233,7 +222,6 @@ cudaError_t runSVDBenchmark(int M, int D, BenchmarkResult &result) {
   // Free GPU memory
   cudaFree(d_X);
   cudaFree(d_V);
-  cudaFree(d_pairs);
   cudaFree(d_any_rots);
 
   // --- Verification: spot-check reconstruction error ---

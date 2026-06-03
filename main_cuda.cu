@@ -161,20 +161,14 @@ int main(int argc, char *argv[]) {
   int *d_any_rots;
   CUDA_CHECK(cudaMalloc(&d_any_rots, sizeof(int)));
 
-  // Pairs array for the round-robin tournament (transferred each round)
-  int *d_pairs;
-  CUDA_CHECK(cudaMalloc(&d_pairs, D * sizeof(int)));
+  // NOTE: No d_pairs array needed — the optimized kernel computes
+  // column pair indices arithmetically from the round number.
 
   // --- Step 4: Configure kernel launch parameters ---
   int blockSize = std::min(M, 256);
   int numBlocks = D / 2;
 
-  // --- Step 5: Build the round-robin tournament index array ---
-  std::vector<int> indices(D);
-  for (int i = 0; i < D; ++i)
-    indices[i] = i;
-
-  // --- Step 6: Sweep loop ---
+  // --- Step 5: Sweep loop ---
 
   int max_sweeps = 500;
   int sweeps = 0;
@@ -192,21 +186,11 @@ int main(int argc, char *argv[]) {
     // One full sweep = D-1 rounds (covers all D*(D-1)/2 column pairs)
     for (int round = 0; round < D - 1; ++round) {
 
-      // Copy current pair indices to the GPU
-      CUDA_CHECK(cudaMemcpy(d_pairs, indices.data(), D * sizeof(int),
-                            cudaMemcpyHostToDevice));
-
       // Launch the kernel: D/2 blocks, each with blockSize threads
-      jacobi_sweep_kernel<<<numBlocks, blockSize>>>(d_X, d_V, d_pairs, M, D,
+      // The kernel computes column indices from `round` — no data transfer
+      jacobi_sweep_kernel<<<numBlocks, blockSize>>>(d_X, d_V, M, D, round,
                                                     epsilon, d_any_rots);
       CUDA_CHECK(cudaDeviceSynchronize());
-
-      // Circular shift: fix index[0], rotate indices[1..D-1] right by 1
-      int last = indices[D - 1];
-      for (int k = D - 1; k > 1; --k) {
-        indices[k] = indices[k - 1];
-      }
-      indices[1] = last;
     }
 
     // Read back convergence flag
@@ -240,7 +224,6 @@ int main(int argc, char *argv[]) {
   CUDA_CHECK(cudaFree(d_X));
   CUDA_CHECK(cudaFree(d_V));
   CUDA_CHECK(cudaFree(d_any_rots));
-  CUDA_CHECK(cudaFree(d_pairs));
 
   // --- Step 8: Extract U and Sigma, sort by descending singular value ---
 
