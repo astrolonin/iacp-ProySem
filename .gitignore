@@ -4,10 +4,7 @@ proposal/
 summary/
 
 # Compiled binaries
-svd_seq
-svd_cuda
-svd_omp
-test
+svd_*
 stress_test
 
 # Editor/IDE files
