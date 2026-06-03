@@ -1,1 +1,12 @@
-**/BetaPic/*
+# Data directory (FITS files, large binaries)
+data/
+
+# Compiled binaries
+svd_seq
+svd_cuda
+test
+stress_test
+
+# Editor/IDE files
+.clangd
+compile_flags.txt
