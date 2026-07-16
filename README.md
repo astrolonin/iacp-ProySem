@@ -1,11 +1,11 @@
 # Parallel One-Sided Jacobi SVD for PCA in High Contrast Imaging
 
-Proyecto semestral — Introduccion a la Computacion Paralela (2026-1)
-Universidad de Concepcion. Profesora: Cecilia Hernandez Rivas.
+Proyecto semestral — Introduccion a la computación paralela (2026-1)
+Universidad de Concepcion. Profesora: Cecilia Hernández Rivas.
 
-Implementa el metodo unilateral de Jacobi para descomposicion de valores singulares (SVD) en tres versiones: secuencial, OpenMP (CPU multi-nucleo) y CUDA (GPU). Compara contra LAPACK como referencia. La aplicacion es analisis de componentes principales (PCA) para deteccion de exoplanetas mediante *Angular Differential Imaging* (ADI) en datos del instrumento SPHERE/VLT.
+Se implementa el metodo unilateral de Jacobi para descomposición de valores singulares (SVD) en tres versiones: secuencial, OpenMP (CPU multi-núcleo) y CUDA (GPU). Compara contra LAPACK como referencia. La aplicación es el análisis de componentes principales (PCA) como algoritmo de detección de exoplanetas mediante *Angular Differential Imaging* (ADI).
 
-## Compilacion
+## Compilación
 
 ```bash
 # Requiere: libcfitsio-dev, liblapacke-dev, CUDA Toolkit 11.x
