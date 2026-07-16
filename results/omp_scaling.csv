@@ -1,0 +1,6 @@
+threads,dataset,T,D,time_ms
+1,data/CTCha/center_im.fits,80,1048576,55381.7624
+2,data/CTCha/center_im.fits,80,1048576,34755.6826
+4,data/CTCha/center_im.fits,80,1048576,31137.1426
+8,data/CTCha/center_im.fits,80,1048576,33907.2111
+16,data/CTCha/center_im.fits,80,1048576,36393.1638

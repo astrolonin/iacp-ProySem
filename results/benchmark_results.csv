@@ -1,0 +1,113 @@
+method,dataset,T,D,sweeps,time_ms,max_error,vram_mb
+Converged in 7 sweeps.
+
+seq,synth_1000x20,1000,20,0,10.9889,7.11e-14,0
+Converged in 7 sweeps.
+
+omp,synth_1000x20,1000,20,0,141.2961,6.75e-14,0
+cuda,synth_1000x20,1000,20,7,2.5758,6.22e-14,0
+lapack,synth_1000x20,1000,20,0,6.2760,N/A,0
+Converged in 8 sweeps.
+
+seq,synth_10000x50,10000,50,0,270.1541,1.62e-13,0
+Converged in 8 sweeps.
+
+omp,synth_10000x50,10000,50,0,370.9877,1.37e-13,0
+cuda,synth_10000x50,10000,50,8,24.3073,1.37e-13,3
+lapack,synth_10000x50,10000,50,0,16.4217,N/A,0
+Converged in 9 sweeps.
+
+seq,synth_100000x100,100000,100,0,7281.2588,3.13e-13,0
+Converged in 9 sweeps.
+
+omp,synth_100000x100,100000,100,0,5486.6672,2.82e-13,0
+cuda,synth_100000x100,100000,100,9,638.8212,2.66e-13,76
+lapack,synth_100000x100,100000,100,0,698.2739,N/A,0
+Converged in 8 sweeps.
+
+seq,synth_1Mx50,1048576,50,0,16091.7306,N/A,0
+Converged in 8 sweeps.
+
+omp,synth_1Mx50,1048576,50,0,12566.1576,N/A,0
+cuda,synth_1Mx50,1048576,50,8,1515.8194,N/A,400
+lapack,synth_1Mx50,1048576,50,0,2004.4985,N/A,0
+Converged in 9 sweeps.
+
+seq,synth_1Mx100,1048576,100,0,67223.7187,N/A,0
+Converged in 9 sweeps.
+
+omp,synth_1Mx100,1048576,100,0,50291.7802,N/A,0
+cuda,synth_1Mx100,1048576,100,9,6561.8466,N/A,800
+lapack,synth_1Mx100,1048576,100,0,7679.0514,N/A,0
+FITS 4D cube: 2 channels x 6 frames of 64x64 (4096 pixels/frame)
+Using channel 0
+Loaded matrix X: 6 rows x 4096 cols
+
+Converged in 5 sweeps.
+
+seq,data/BetaPic/median_unsat.fits,6,4096,0,0.3742,1.40e-09,0
+Converged in 6 sweeps.
+
+omp,data/BetaPic/median_unsat.fits,6,4096,0,70.6090,1.40e-09,0
+cuda,data/BetaPic/median_unsat.fits,6,4096,6,0.6767,2.10e-09,0
+lapack,data/BetaPic/median_unsat.fits,6,4096,0,2.4355,N/A,0
+FITS 4D cube: 2 channels x 16 frames of 1024x1024 (1048576 pixels/frame)
+Using channel 0
+Loaded matrix X: 16 rows x 1048576 cols
+
+Converged in 7 sweeps.
+
+seq,data/HR3549_2/center_im.fits,16,1048576,0,1404.5308,5.68e-12,0
+Converged in 8 sweeps.
+
+omp,data/HR3549_2/center_im.fits,16,1048576,0,1127.3597,8.87e-12,0
+cuda,data/HR3549_2/center_im.fits,16,1048576,8,304.2359,8.64e-12,128
+lapack,data/HR3549_2/center_im.fits,16,1048576,0,278.6665,N/A,0
+FITS 4D cube: 2 channels x 80 frames of 1024x1024 (1048576 pixels/frame)
+Using channel 0
+Loaded matrix X: 80 rows x 1048576 cols
+
+Converged in 10 sweeps.
+
+seq,data/CTCha/center_im.fits,80,1048576,0,51968.2301,N/A,0
+Converged in 10 sweeps.
+
+omp,data/CTCha/center_im.fits,80,1048576,0,36373.5162,N/A,0
+cuda,data/CTCha/center_im.fits,80,1048576,10,4689.8299,N/A,640
+lapack,data/CTCha/center_im.fits,80,1048576,0,4925.5195,N/A,0
+FITS 4D cube: 2 channels x 192 frames of 1024x1024 (1048576 pixels/frame)
+Using channel 0
+Loaded matrix X: 192 rows x 1048576 cols
+
+Converged in 12 sweeps.
+
+seq,data/BetaPic/center_im.fits,192,1048576,0,320918.0322,N/A,0
+Converged in 13 sweeps.
+
+omp,data/BetaPic/center_im.fits,192,1048576,0,260837.4399,N/A,0
+cuda,data/BetaPic/center_im.fits,192,1048576,13,40416.0859,N/A,1536
+lapack,data/BetaPic/center_im.fits,192,1048576,0,15518.0659,N/A,0
+FITS 4D cube: 2 channels x 256 frames of 1024x1024 (1048576 pixels/frame)
+Using channel 0
+Loaded matrix X: 256 rows x 1048576 cols
+
+Converged in 12 sweeps.
+
+seq,data/GJ504_2/center_im-001.fits,256,1048576,0,592159.0803,N/A,0
+Converged in 13 sweeps.
+
+omp,data/GJ504_2/center_im-001.fits,256,1048576,0,469001.5217,N/A,0
+cuda,data/GJ504_2/center_im-001.fits,256,1048576,13,77001.2771,N/A,2048
+lapack,data/GJ504_2/center_im-001.fits,256,1048576,0,20794.8386,N/A,0
+FITS 4D cube: 2 channels x 320 frames of 1024x1024 (1048576 pixels/frame)
+Using channel 0
+Loaded matrix X: 320 rows x 1048576 cols
+
+Converged in 13 sweeps.
+
+seq,data/HR2562_1/center_im-001.fits,320,1048576,0,962124.1905,N/A,0
+Converged in 13 sweeps.
+
+omp,data/HR2562_1/center_im-001.fits,320,1048576,0,700758.9016,N/A,0
+cuda,data/HR2562_1/center_im-001.fits,320,1048576,13,115701.1026,N/A,2560
+lapack,data/HR2562_1/center_im-001.fits,320,1048576,0,22829.1413,N/A,0

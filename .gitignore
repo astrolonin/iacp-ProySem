@@ -1,12 +1,48 @@
 # Data directory (FITS files, large binaries)
 data/
+
+# Report directories (LaTeX, PDFs, auxiliary files)
 proposal/
+progress/
 summary/
+final_report/
+final_pres/
 
 # Compiled binaries
-svd_*
+svd_seq
+svd_omp
+svd_cuda
 stress_test
+benchmark
+lapack_error
+
+# Compiled Python
+__pycache__/
+*.pyc
 
 # Editor/IDE files
 .clangd
 compile_flags.txt
+.vscode/
+.idea/
+
+# LaTeX auxiliary files
+*.aux
+*.bbl
+*.bcf
+*.blg
+*.fdb_latexmk
+*.fls
+*.log
+*.nav
+*.out
+*.run.xml
+*.snm
+*.synctex.gz
+*.toc
+*.bbl-SAVE-ERROR
+indent.log
+
+# OS generated files
+.DS_Store
+Thumbs.db

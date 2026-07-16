@@ -3,22 +3,10 @@
 #include "matrix_hci.hpp"
 #include <utility>
 
-// Sign function: returns -1 if val < 0, +1 if val > 0, 0 if val == 0
 template <typename T> int sign(T val) { return (T(0) < val) - (val < T(0)); }
 
-// =============================================================================
-// SVDSequential — One-Sided Jacobi SVD (sequential version)
-//
-// Computes the SVD of matrix X using iterative Givens rotations to
-// orthogonalize the columns of X. After convergence:
-//   - Each column of X becomes sigma_i * u_i (a scaled left singular vector)
-//   - V accumulates all rotations and contains the right singular vectors
-//
-// Parameters:
-//   X       — working matrix (M×D), modified in place
-//   V       — rotation accumulator (D×D), starts as identity, modified in place
-//   epsilon — convergence threshold (default 1e-10)
-// =============================================================================
+// SVD secuencial: metodo unilateral de Jacobi.
+// W se modifica in place, V acumula las rotaciones.
 inline void SVDSequential(MatrixHCI &X, MatrixHCI &V, double epsilon = 1e-10) {
   int M = X.rows, D = X.cols;
   bool any_rots = true;
@@ -27,15 +15,9 @@ inline void SVDSequential(MatrixHCI &X, MatrixHCI &V, double epsilon = 1e-10) {
   while (any_rots && sweeps < max_sweeps) {
     any_rots = false;
 
-    // Visit every column pair (i, j) with i < j
     for (int i = 0; i < D - 1; ++i) {
       for (int j = i + 1; j < D; ++j) {
 
-        // --- Compute dot products ---
-        // a = ||col_i||² = Σ_r X(r,i)²
-        // b = ||col_j||² = Σ_r X(r,j)²
-        // c = <col_i, col_j> = Σ_r X(r,i)*X(r,j)
-        //
         double a = 0.0, b = 0.0, c = 0.0;
         for (int r = 0; r < M; ++r) {
           a += X(r, i) * X(r, i);
@@ -43,30 +25,19 @@ inline void SVDSequential(MatrixHCI &X, MatrixHCI &V, double epsilon = 1e-10) {
           c += X(r, i) * X(r, j);
         }
 
-        // Skip near-zero columns to avoid division by zero
         if (a < 1e-12 || b < 1e-12)
           continue;
 
-        // Correlation = |c| / sqrt(a*b) = |cos(angle between columns)|
         double corr = std::abs(c) / std::sqrt(a * b);
 
         if (corr > epsilon) {
           any_rots = true;
 
-          // --- Compute Givens rotation angle ---
-          //
-          // The Jacobi formulas find the rotation angle that
-          // zeroes out the off-diagonal element c in the 2×2
-          // Gram matrix [[a, c], [c, b]]:
-          //
-          //   tau = (b - a) / (2c)
-          //   t = sign(tau) / (|tau| + sqrt(1 + tau²))
           double tau = (b - a) / (2.0 * c);
           double t = sign(tau) / (std::abs(tau) + std::sqrt(1.0 + tau * tau));
           double c_rot = 1.0 / std::sqrt(1.0 + t * t);
           double s_rot = c_rot * t;
 
-          // --- Apply rotation to columns i and j of X ---
           for (int r = 0; r < M; ++r) {
             double x_i = X(r, i);
             double x_j = X(r, j);
@@ -74,7 +45,6 @@ inline void SVDSequential(MatrixHCI &X, MatrixHCI &V, double epsilon = 1e-10) {
             X(r, j) = s_rot * x_i + c_rot * x_j;
           }
 
-          // --- Apply the same rotation to V ---
           for (int r = 0; r < D; ++r) {
             double v_i = V(r, i);
             double v_j = V(r, j);
@@ -93,12 +63,7 @@ inline void SVDSequential(MatrixHCI &X, MatrixHCI &V, double epsilon = 1e-10) {
   }
 }
 
-// =============================================================================
-// extractUSigma — Extract U and Sigma from the converged working matrix W
-//
-// After Jacobi convergence, column c of W equals sigma[c] * U(:, c).
-// We recover sigma by computing the column norm, then normalize to get U.
-// =============================================================================
+// Extrae U y Sigma de la matriz de trabajo W convergida.
 inline void extractUSigma(const MatrixHCI &W, MatrixHCI &U,
                           std::vector<double> &sigma) {
   sigma.resize(W.cols, 0.0);
@@ -119,12 +84,7 @@ inline void extractUSigma(const MatrixHCI &W, MatrixHCI &U,
   }
 }
 
-// =============================================================================
-// sortPC — Sort principal components by descending singular value
-//
-// Uses selection sort to reorder Sigma in descending order, swapping the
-// corresponding columns of U and V to maintain consistency.
-// =============================================================================
+// Ordena componentes por valor singular descendente (selection sort).
 inline void sortPC(MatrixHCI &U, std::vector<double> &sigma, MatrixHCI &V) {
   int D = sigma.size();
   for (int i = 0; i < D - 1; ++i) {

@@ -1,40 +1,40 @@
-# Makefile for iacp-ProySem — Sequential, OpenMP, and CUDA SVD
+# Makefile — Parallel One-Sided Jacobi SVD (secuencial, OpenMP, CUDA)
 #
 # Targets:
-#   make seq        — build the sequential (CPU-only) SVD
-#   make omp        — build the OpenMP (CPU-parallel) SVD
-#   make cuda       — build the CUDA (GPU) SVD
-#   make stress     — build the GPU stress test / profiling tool
-#   make all        — build all targets
-#   make clean      — remove binaries
+#   make        — build the unified SVD binary (svd)
+#   make bench  — build the benchmark driver (4 methods)
+#   make stress — build the GPU stress test
+#   make lapack_error — build the LAPACK error checker
+#   make all    — build all targets
+#   make clean  — remove binaries
 
-CXX      = g++
-NVCC     = nvcc
-CXXFLAGS = -O3 -std=c++17
-NVFLAGS  = -O3 -std=c++17 -ccbin g++-9
+CXX       = g++
+NVCC      = nvcc
+CXXFLAGS  = -O3 -std=c++17 -Iinclude
+NVFLAGS   = -O3 -std=c++17 -ccbin g++-9 -Iinclude
 
-# CFITSIO library flags (required for FITS file reading)
-FITS_FLAGS = -lcfitsio
+FITS_FLAGS  = -lcfitsio
+LAPACK_FLAGS = -llapacke
 
-.PHONY: all seq omp cuda stress clean
+.PHONY: all clean
 
-all: seq omp cuda stress
+# Unified binary (sequential, OpenMP or CUDA via -m flag)
+svd: main.cu src/svd_cuda.cu include/hci-svd/*.hpp
+	$(NVCC) $(NVFLAGS) -Xcompiler -fopenmp main.cu -o svd $(FITS_FLAGS)
 
-# Sequential version (CPU only)
-seq: main.cpp matrix_hci.hpp svd_seq.hpp fits_reader.hpp
-	$(CXX) $(CXXFLAGS) main.cpp -o svd_seq $(FITS_FLAGS)
+# Benchmark driver: all 4 methods on multiple datasets, outputs CSV
+bench: src/benchmark.cu src/svd_cuda.cu include/hci-svd/*.hpp
+	$(NVCC) $(NVFLAGS) -Xcompiler -fopenmp src/benchmark.cu -o benchmark $(FITS_FLAGS) $(LAPACK_FLAGS)
 
-# OpenMP version (CPU parallel)
-omp: main_omp.cpp matrix_hci.hpp svd_omp.hpp fits_reader.hpp
-	$(CXX) $(CXXFLAGS) -fopenmp main_omp.cpp -o svd_omp $(FITS_FLAGS)
+# GPU stress test
+stress: src/stress_test.cu src/svd_cuda.cu
+	$(NVCC) $(NVFLAGS) src/stress_test.cu -o stress_test
 
-# CUDA version (GPU)
-cuda: main_cuda.cu svd_cuda.cu matrix_hci.hpp fits_reader.hpp
-	$(NVCC) $(NVFLAGS) main_cuda.cu -o svd_cuda $(FITS_FLAGS)
+# LAPACK-only reconstruction error checker
+lapack_error: src/lapack_error.cpp include/hci-svd/*.hpp
+	$(CXX) $(CXXFLAGS) src/lapack_error.cpp -o lapack_error $(FITS_FLAGS) $(LAPACK_FLAGS)
 
-# Stress test / profiling (GPU)
-stress: stress_test.cu svd_cuda.cu
-	$(NVCC) $(NVFLAGS) stress_test.cu -o stress_test
+all: svd bench stress lapack_error
 
 clean:
-	rm -f svd_seq svd_omp svd_cuda stress_test
+	rm -f svd svd_seq svd_omp svd_cuda benchmark stress_test lapack_error
